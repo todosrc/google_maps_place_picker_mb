@@ -29,7 +29,7 @@ typedef PinBuilder = Widget Function(
 );
 
 class GoogleMapPlacePicker extends StatelessWidget {
-  const GoogleMapPlacePicker({
+  GoogleMapPlacePicker({
     Key? key,
     required this.initialTarget,
     required this.appBarKey,
@@ -100,6 +100,8 @@ class GoogleMapPlacePicker extends StatelessWidget {
   /// Zoom feature toggle
   final bool zoomGesturesEnabled;
   final bool zoomControlsEnabled;
+
+  Completer<GoogleMapController> _controller = Completer();
 
   _searchByCameraLocation(PlaceProvider provider) async {
     // We don't want to search location again if camera location is changed by zooming in/out.
@@ -180,18 +182,21 @@ class GoogleMapPlacePicker extends StatelessWidget {
               pickArea
             ]) : Set<Circle>(),
             onMapCreated: (GoogleMapController controller) {
-              provider.mapController = controller;
-              provider.setCameraPosition(null);
-              provider.pinState = PinState.Idle;
+              if(!_controller.isCompleted) {
 
-              // When select initialPosition set to true.
-              if (selectInitialPosition!) {
-                provider.setCameraPosition(initialCameraPosition);
-                _searchByCameraLocation(provider);
-              }
+                provider.mapController.complete(controller);
+                provider.setCameraPosition(null);
+                provider.pinState = PinState.Idle;
 
-              if(onMapCreated != null) {
-                onMapCreated!(controller);
+                // When select initialPosition set to true.
+                if (selectInitialPosition!) {
+                  provider.setCameraPosition(initialCameraPosition);
+                  _searchByCameraLocation(provider);
+                }
+
+                if (onMapCreated != null) {
+                  onMapCreated!(controller);
+                }
               }
             },
             onCameraIdle: () {
@@ -342,8 +347,8 @@ class GoogleMapPlacePicker extends StatelessWidget {
   }
 
   Widget _buildZoomButtons() {
-    return Selector<PlaceProvider, Tuple2<GoogleMapController?, LatLng?>>(
-      selector: (_, provider) => new Tuple2<GoogleMapController?, LatLng?>(
+    return Selector<PlaceProvider, Tuple2<Completer<GoogleMapController>, LatLng?>>(
+      selector: (_, provider) => new Tuple2<Completer<GoogleMapController>, LatLng?>(
           provider.mapController, provider.cameraPosition?.target),
       builder: (context, data, __) {
         if (!this.zoomControlsEnabled || data.item1 == null || data.item2 == null) {
@@ -362,10 +367,12 @@ class GoogleMapPlacePicker extends StatelessWidget {
                     IconButton(
                         icon: Icon(Icons.add),
                         onPressed: () async {
+
+                          final GoogleMapController controller = await data.item1!.future;
                           double currentZoomLevel =
-                              await data.item1!.getZoomLevel();
+                              await controller.getZoomLevel();
                           currentZoomLevel = currentZoomLevel + 2;
-                          data.item1!.animateCamera(
+                          controller.animateCamera(
                             CameraUpdate.newCameraPosition(
                               CameraPosition(
                                 target: data.item2!,
@@ -378,11 +385,13 @@ class GoogleMapPlacePicker extends StatelessWidget {
                     IconButton(
                         icon: Icon(Icons.remove),
                         onPressed: () async {
+
+                          final GoogleMapController controller = await data.item1!.future;
                           double currentZoomLevel =
-                              await data.item1!.getZoomLevel();
+                              await controller.getZoomLevel();
                           currentZoomLevel = currentZoomLevel - 2;
                           if (currentZoomLevel < 0) currentZoomLevel = 0;
-                          data.item1!.animateCamera(
+                          controller.animateCamera(
                             CameraUpdate.newCameraPosition(
                               CameraPosition(
                                 target: data.item2!,

@@ -113,9 +113,10 @@ class PlaceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  GoogleMapController? _mapController;
-  GoogleMapController? get mapController => _mapController;
-  set mapController(GoogleMapController? controller) {
+  //GoogleMapController? _mapController;
+  Completer<GoogleMapController> _mapController = Completer();
+  Completer<GoogleMapController> get mapController => _mapController;
+  set mapController(Completer<GoogleMapController> controller) {
     _mapController = controller;
     notifyListeners();
   }

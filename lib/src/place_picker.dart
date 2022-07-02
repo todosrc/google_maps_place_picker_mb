@@ -418,7 +418,8 @@ class _PlacePickerState extends State<PlacePicker> {
   }
 
   _moveTo(double latitude, double longitude) async {
-    GoogleMapController? controller = provider!.mapController;
+
+    final GoogleMapController controller = await provider!.mapController.future;
     if (controller == null) return;
 
     await controller.animateCamera(
